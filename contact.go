@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"encoding/json"
 
 	"github.com/Rhymen/go-whatsapp/binary"
 )
@@ -19,12 +20,27 @@ const (
 	PresencePaused      Presence = "paused"
 )
 
+type ProfilePic struct {
+	URL   string `json:"eurl"`
+	Tag    string `json:"tag"`
+	Status int    `json:"status"`
+}
+
 //TODO: filename? WhatsApp uses Store.Contacts for these functions
 // functions probably shouldn't return a string, maybe build a struct / return json
 // check for further queries
-func (wac *Conn) GetProfilePicThumb(jid string) (<-chan string, error) {
+func (wac *Conn) GetProfilePicThumb(jid string) (ProfilePic, error) {
+	pic := ProfilePic{}
 	data := []interface{}{"query", "ProfilePicThumb", jid}
-	return wac.writeJson(data)
+
+	if ch, err := wac.writeJson(data); err != nil {
+		return pic, err
+	} else {
+		str := <-ch
+		json.Unmarshal([]byte(str), &pic)
+	}
+	
+	return pic, nil
 }
 
 func (wac *Conn) GetStatus(jid string) (<-chan string, error) {
