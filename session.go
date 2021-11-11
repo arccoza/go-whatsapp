@@ -27,12 +27,12 @@ Every successful created connection returns a new Session. The Session(ClientTok
 every re-login and should be saved every time.
 */
 type Session struct {
-	ClientId    string
-	ClientToken string
-	ServerToken string
-	EncKey      []byte
-	MacKey      []byte
-	Wid         string
+	ClientId    string `json:"clientId" firestore:"clientId"`
+	ClientToken string `json:"clientToken" firestore:"clientToken"`
+	ServerToken string `json:"serverToken" firestore:"serverToken"`
+	EncKey      []byte `json:"encKey" firestore:"encKey"`
+	MacKey      []byte `json:"macKey" firestore:"macKey"`
+	Wid         string `json:"wid" firestore:"wid"`
 }
 
 type Info struct {
@@ -57,6 +57,14 @@ type PhoneInfo struct {
 	DeviceModel        string
 	OsBuildNumber      string
 	WaVersion          string
+}
+
+func (s Session) ToJSON() ([]byte, error) {
+	return json.Marshal(s)
+}
+
+func (s *Session) FromJSON(data []byte) error {
+	return json.Unmarshal(data, s)
 }
 
 func newInfoFromReq(info map[string]interface{}) *Info {
