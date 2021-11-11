@@ -6,9 +6,33 @@ import (
 	"time"
 )
 
-func (wac *Conn) GetGroupMetaData(jid string) (<-chan string, error) {
+type GroupMetadata struct {
+	ID string `json:"id"`
+	Owner string `json:"owner"`
+	Subject string `json:"subject"`
+	Creation uint64 `json:"creation"`
+	Participants []GroupParticipant `json:"participants"`
+	SubjectTime int64 `json:"subjectTime"`
+	SubjectOwner string `json:"subjectOwner"`
+}
+
+type GroupParticipant struct {
+	ID string `json:"id"`
+	IsAdmin bool `json:"isAdmin"`
+	IsSuperAdmin bool `json:"isSuperAdmin"`
+}
+
+func (wac *Conn) GetGroupMetaData(jid string) (*GroupMetadata, error) {
 	data := []interface{}{"query", "GroupMetadata", jid}
-	return wac.writeJson(data)
+	meta := &GroupMetadata{}
+	
+	if ch, err := wac.writeJson(data); err != nil {
+		return nil, err
+	} else if err := json.Unmarshal([]byte(<-ch), &meta); err != nil {
+		return nil, err
+	}
+
+	return meta, nil
 }
 
 func (wac *Conn) CreateGroup(subject string, participants []string) (<-chan string, error) {
