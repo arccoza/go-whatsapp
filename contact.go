@@ -7,6 +7,7 @@ import (
 	"time"
 	"encoding/json"
 
+	"github.com/dgraph-io/ristretto"
 	"github.com/Rhymen/go-whatsapp/binary"
 )
 
@@ -26,18 +27,35 @@ type ProfilePic struct {
 	Status int    `json:"status"`
 }
 
+func (pic *ProfilePic) FromJSON(data []byte) {
+	json.Unmarshal(data, pic)
+}
+
 //TODO: filename? WhatsApp uses Store.Contacts for these functions
 // functions probably shouldn't return a string, maybe build a struct / return json
 // check for further queries
-func (wac *Conn) GetProfilePicThumb(jid string) (ProfilePic, error) {
+func (wac *Conn) GetProfilePicThumb(jid string, cache *ristretto.Cache) (ProfilePic, error) {
 	pic := ProfilePic{}
 	data := []interface{}{"query", "ProfilePicThumb", jid}
+	cacheKey := fmt.Sprintf("query,ProfilePicThumb,%s", jid)
+
+	if cache != nil {
+		if res, hit := cache.Get(cacheKey); hit {
+			pic = res.(ProfilePic)
+			return pic, nil
+		}
+	}
 
 	if ch, err := wac.writeJson(data); err != nil {
 		return pic, err
 	} else {
 		str := <-ch
 		json.Unmarshal([]byte(str), &pic)
+
+		if cache != nil {
+			cache.SetWithTTL(cacheKey, pic, 64, 12 * time.Hour)
+			cache.Wait()
+		}
 	}
 	
 	return pic, nil
