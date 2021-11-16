@@ -41,7 +41,7 @@ func (wac *Conn) GetGroupMetaData(jid string, cache *ristretto.Cache) (GroupMeta
 	} else if err := json.Unmarshal([]byte(<-ch), &meta); err != nil {
 		return meta, err
 	} else if cache != nil {
-		cache.SetWithTTL(cacheKey, meta, 256, 12 * time.Hour)
+		cache.SetWithTTL(cacheKey, meta, 256, 2 * time.Hour)
 		cache.Wait()
 	}
 
