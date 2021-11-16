@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/dgraph-io/ristretto"
 )
 
 type GroupMetadata struct {
@@ -22,14 +24,25 @@ type GroupParticipant struct {
 	IsSuperAdmin bool `json:"isSuperAdmin"`
 }
 
-func (wac *Conn) GetGroupMetaData(jid string) (*GroupMetadata, error) {
+func (wac *Conn) GetGroupMetaData(jid string, cache *ristretto.Cache) (GroupMetadata, error) {
+	meta := GroupMetadata{}
 	data := []interface{}{"query", "GroupMetadata", jid}
-	meta := &GroupMetadata{}
+	cacheKey := fmt.Sprintf("query,GroupMetadata,%s", jid)
+
+	if cache != nil {
+		if res, hit := cache.Get(cacheKey); hit {
+			meta = res.(GroupMetadata)
+			return meta, nil
+		}
+	}
 	
 	if ch, err := wac.writeJson(data); err != nil {
-		return nil, err
+		return meta, err
 	} else if err := json.Unmarshal([]byte(<-ch), &meta); err != nil {
-		return nil, err
+		return meta, err
+	} else if cache != nil {
+		cache.SetWithTTL(cacheKey, meta, 256, 12 * time.Hour)
+		cache.Wait()
 	}
 
 	return meta, nil
